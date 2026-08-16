@@ -9,6 +9,11 @@ struct WindowInfo {
     let frame: CGRect
     let isMinimized: Bool
 
+    /// Whether the owning app considers this its main window. For an app with several
+    /// windows this is the only way to tell *which* one focus landed on, since they all
+    /// share a pid.
+    let isMain: Bool
+
     /// Live handle to the window. Kept so a later step can raise it; it is only valid
     /// while the owning process is alive.
     let element: AXUIElement
@@ -66,6 +71,7 @@ enum WindowEnumerator {
                 title: AX.attribute(window, kAXTitleAttribute as String) ?? "",
                 frame: frame,
                 isMinimized: AX.attribute(window, kAXMinimizedAttribute as String) ?? false,
+                isMain: AX.attribute(window, kAXMainAttribute as String) ?? false,
                 element: window
             )
         }
