@@ -43,8 +43,16 @@ enum WindowEnumerator {
     /// `onProgress` fires before each app is queried so a hang is attributable to a
     /// specific app in the log rather than showing up as silence.
     static func allWindows(onProgress: (String) -> Void = { _ in }) -> [WindowInfo] {
-        NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy == .regular }  // skip agents and daemons: no user-facing windows
+        let ownPid = ProcessInfo.processInfo.processIdentifier
+
+        return NSWorkspace.shared.runningApplications
+            .filter {
+                // Agents and daemons have no user-facing windows. This app is an agent
+                // too, but its settings window is a real window a user may want to switch
+                // back to — the switcher panel itself is excluded by the standard-window
+                // subrole check below, since a borderless panel is not a standard window.
+                $0.activationPolicy == .regular || $0.processIdentifier == ownPid
+            }
             .flatMap { app -> [WindowInfo] in
                 onProgress(app.localizedName ?? "pid \(app.processIdentifier)")
                 return windows(of: app)

@@ -12,12 +12,9 @@ import CoreGraphics
 /// Tab while Option is held, so a bug here cannot swallow ordinary typing. The caller is
 /// still expected to bound the process lifetime while this is under development.
 final class HotkeyMonitor {
-    private enum Key {
-        static let tab: Int64 = 48
-        static let escape: Int64 = 53
-        /// The key above Tab, mirroring the system's own Command+` for same-app cycling.
-        static let grave: Int64 = 50
-    }
+    /// Escape stays fixed. It cancels the switcher, and letting it be rebound would let a
+    /// user configure away the only way out of a gesture.
+    private static let escapeKey: Int64 = 53
 
     /// Which windows a gesture cycles through.
     ///
@@ -41,6 +38,11 @@ final class HotkeyMonitor {
     private var snapshot: [WindowInfo] = []
     private var selection = 0
     private var isCycling = false
+
+    /// The modifiers whose release ends the current gesture. Captured when a cycle begins
+    /// rather than read back from preferences, so rebinding the shortcut mid-gesture
+    /// cannot strand the switcher waiting for a key that is no longer part of it.
+    private var holdModifiers: CGEventFlags = []
 
     init(report: Report, history: WindowHistory, thumbnails: ThumbnailProvider) {
         self.report = report
@@ -107,29 +109,48 @@ final class HotkeyMonitor {
             return nil
         }
 
-        let optionHeld = event.flags.contains(.maskAlternate)
+        // Events this app synthesised come back through its own tap. Without skipping
+        // them, the Control+Arrow posted to change Space could be read as user input.
+        if event.getIntegerValueField(.eventSourceUserData) == SpaceSwitcher.syntheticMarker {
+            return Unmanaged.passUnretained(event)
+        }
 
         switch type {
         case .keyDown:
             let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+            let reverse = event.flags.contains(.maskShift)
 
-            if keyCode == Key.tab, optionHeld {
-                advance(reverse: event.flags.contains(.maskShift), scope: .allWindows)
-                return nil  // consumed: the focused app must not also receive this Tab
-            }
-            if keyCode == Key.grave, optionHeld {
-                advance(reverse: event.flags.contains(.maskShift), scope: .currentApp)
+            // Space switching is discrete, not a held cycle: there is no public way to
+            // enumerate Spaces, so there is nothing to show a list of and nothing to
+            // commit on release. One press, one step.
+            let space = Preferences.spaceShortcut
+            if keyCode == space.keyCode, space.matches(flags: event.flags) {
+                report.add("space: \(reverse ? "previous" : "next")")
+                SpaceSwitcher.move(next: !reverse)
                 return nil
             }
-            if keyCode == Key.escape, isCycling {
+
+            for (shortcut, scope) in [
+                (Preferences.allWindowsShortcut, Scope.allWindows),
+                (Preferences.sameAppShortcut, Scope.currentApp),
+            ] where keyCode == shortcut.keyCode && shortcut.matches(flags: event.flags) {
+                if !isCycling {
+                    holdModifiers = shortcut.holdModifiers
+                }
+                advance(reverse: reverse, scope: scope)
+                // Consumed: the focused app must not also receive this keystroke.
+                return nil
+            }
+
+            if keyCode == Self.escapeKey, isCycling {
                 cancel()
                 return nil
             }
 
         case .flagsChanged:
-            // Releasing Option is the commit signal. flagsChanged is the only event that
-            // reports a modifier going up, which a plain hotkey registration never sees.
-            if isCycling, !optionHeld {
+            // Releasing the held modifiers is the commit signal. flagsChanged is the only
+            // event reporting a modifier going up, which a hotkey registration never sees.
+            if isCycling, event.flags.intersection(holdModifiers).isEmpty {
                 commit()
             }
 

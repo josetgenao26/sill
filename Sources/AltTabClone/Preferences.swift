@@ -89,6 +89,38 @@ enum Preferences {
         set { write(newValue, "screenChoice") }
     }
 
+    /// Cycles every window. Defaults to Option+Tab.
+    static var allWindowsShortcut: Shortcut {
+        get { shortcut("shortcutAllWindows") ?? Shortcut(keyCode: 48, modifiers: .maskAlternate) }
+        set { store(newValue, "shortcutAllWindows") }
+    }
+
+    /// Cycles windows of the focused app only. Defaults to Option+`, mirroring the
+    /// system's own Command+`.
+    static var sameAppShortcut: Shortcut {
+        get { shortcut("shortcutSameApp") ?? Shortcut(keyCode: 50, modifiers: .maskAlternate) }
+        set { store(newValue, "shortcutSameApp") }
+    }
+
+    /// Moves to the next Space. Defaults to Control+Tab.
+    ///
+    /// Worth knowing before keeping the default: Control+Tab is how browsers and editors
+    /// switch their own tabs, and a global trigger takes it away from all of them. It is
+    /// rebindable for exactly that reason.
+    static var spaceShortcut: Shortcut {
+        get { shortcut("shortcutSpace") ?? Shortcut(keyCode: 48, modifiers: .maskControl) }
+        set { store(newValue, "shortcutSpace") }
+    }
+
+    private static func shortcut(_ key: String) -> Shortcut? {
+        UserDefaults.standard.string(forKey: key).flatMap(Shortcut.init(storage:))
+    }
+
+    private static func store(_ value: Shortcut, _ key: String) {
+        UserDefaults.standard.set(value.storage, forKey: key)
+        NotificationCenter.default.post(name: didChange, object: nil)
+    }
+
     /// Upper bound on rows or cells drawn. A switcher listing sixty windows is not a
     /// switcher; past a point, scanning the list costs more than finding the window
     /// another way.

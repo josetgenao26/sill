@@ -263,7 +263,10 @@ final class SwitcherPanel {
         let stack = NSStackView(views: views)
         stack.orientation = .vertical
         stack.spacing = 0
-        stack.alignment = .leading
+        // .width, not .leading: leading sizes each row to its own content, so a row was
+        // only as wide as its title — and since the highlight and the click target are the
+        // row's bounds, both stopped where the text did.
+        stack.alignment = .width
         stack.distribution = .fillEqually
         return stack
     }

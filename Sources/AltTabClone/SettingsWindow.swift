@@ -34,6 +34,14 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         window.isReleasedWhenClosed = false
 
         let form = NSStackView(views: [
+            section("Shortcuts"),
+            row("All windows", recorder(Preferences.allWindowsShortcut) { Preferences.allWindowsShortcut = $0 }),
+            row("Current app", recorder(Preferences.sameAppShortcut) { Preferences.sameAppShortcut = $0 }),
+            hint("Hold the modifier, tap the key, release to switch."),
+            row("Next Space", recorder(Preferences.spaceShortcut) { Preferences.spaceShortcut = $0 }),
+            hint("One press per Space; add Shift to go back. Needs Mission Control's\n"
+                 + "\"Move left/right a space\" shortcuts enabled."),
+
             section("Appearance"),
             row("Layout", segmented(PanelLayout.allCases.map(\.label), selected: index(of: Preferences.layout)) { index in
                 Preferences.layout = PanelLayout.allCases[index]
@@ -72,6 +80,19 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         let label = NSTextField(labelWithString: title)
         label.font = .boldSystemFont(ofSize: 13)
         return label
+    }
+
+    private func hint(_ text: String) -> NSView {
+        let label = NSTextField(labelWithString: text)
+        label.font = .systemFont(ofSize: 11)
+        label.textColor = .secondaryLabelColor
+        return label
+    }
+
+    private func recorder(_ shortcut: Shortcut, onChange: @escaping (Shortcut) -> Void) -> NSView {
+        let recorder = ShortcutRecorder(shortcut: shortcut)
+        recorder.onChange = onChange
+        return recorder
     }
 
     private func row(_ title: String, _ control: NSView) -> NSView {
