@@ -21,13 +21,17 @@ IDENTIFIER="com.josetgenao.sill"
 #
 # Building both roughly doubles compile time, which is the wrong trade during development
 # when the binary only ever runs on this machine. Release is where it matters.
+#
+# The ${ARCHS[@]+...} guard is not decoration: macOS ships bash 3.2, where expanding an
+# empty array under `set -u` is an error rather than an empty list. Without it, every
+# debug build fails while release builds keep working, since only debug leaves it empty.
 ARCHS=()
 if [ "$CONFIG" = "release" ]; then
     ARCHS=(--arch arm64 --arch x86_64)
 fi
 
-swift build --package-path "$ROOT" -c "$CONFIG" "${ARCHS[@]}"
-BINARY="$(swift build --package-path "$ROOT" -c "$CONFIG" "${ARCHS[@]}" --show-bin-path)/Sill"
+swift build --package-path "$ROOT" -c "$CONFIG" ${ARCHS[@]+"${ARCHS[@]}"}
+BINARY="$(swift build --package-path "$ROOT" -c "$CONFIG" ${ARCHS[@]+"${ARCHS[@]}"} --show-bin-path)/Sill"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"

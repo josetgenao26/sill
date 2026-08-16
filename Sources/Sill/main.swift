@@ -43,6 +43,38 @@ guard AX.waitForTrust(timeout: 300) else {
     exit(1)
 }
 
+// MARK: - Demo mode
+
+// Holds the panel open with no gesture, so it can be photographed.
+//
+// The panel normally exists only while the modifier is held, which makes it genuinely
+// hard to capture: a screenshot shortcut needs its own modifiers, and the panel vanishes
+// the moment Option comes up.
+if arguments.contains("--demo") {
+    let seconds = arguments.firstIndex(of: "--demo")
+        .flatMap { arguments[safe: $0 + 1] }
+        .flatMap(Double.init) ?? 20
+
+    let windows = WindowEnumerator.allWindows()
+    let layout = Preferences.layout
+    let thumbnails = ThumbnailProvider(report: report)
+    let panel = SwitcherPanel()
+
+    report.add("demo: \(layout.rawValue), \(windows.count) windows, \(Int(seconds))s")
+    panel.show(windows, selection: 1, layout: layout, thumbnails: layout.needsCapture ? thumbnails : nil)
+
+    if layout.needsCapture {
+        thumbnails.fetch(for: windows) { key, image in
+            panel.setThumbnail(image, for: key)
+        }
+    }
+
+    pump(seconds)
+    panel.hide()
+    report.close()
+    exit(0)
+}
+
 // MARK: - Hotkey mode
 
 if arguments.contains("--hotkey") {
