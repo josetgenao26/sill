@@ -263,11 +263,19 @@ final class SwitcherPanel {
         let stack = NSStackView(views: views)
         stack.orientation = .vertical
         stack.spacing = 0
-        // .width, not .leading: leading sizes each row to its own content, so a row was
-        // only as wide as its title — and since the highlight and the click target are the
-        // row's bounds, both stopped where the text did.
-        stack.alignment = .width
-        stack.distribution = .fillEqually
+        stack.alignment = .leading
+
+        // Each row is tied to the stack's width explicitly rather than relying on the
+        // stack's own alignment to stretch them. Leading alignment alone sized every row
+        // to its own title, which cut the highlight and the click target short; .width
+        // alignment stretched them but left where the content sat inside ambiguous.
+        // A direct constraint says exactly one thing.
+        //
+        // No distribution is set: every row already carries a fixed height, and asking the
+        // stack to distribute them as well would be two rules for one measurement.
+        for view in views {
+            view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        }
         return stack
     }
 

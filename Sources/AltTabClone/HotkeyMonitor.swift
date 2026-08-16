@@ -109,26 +109,10 @@ final class HotkeyMonitor {
             return nil
         }
 
-        // Events this app synthesised come back through its own tap. Without skipping
-        // them, the Control+Arrow posted to change Space could be read as user input.
-        if event.getIntegerValueField(.eventSourceUserData) == SpaceSwitcher.syntheticMarker {
-            return Unmanaged.passUnretained(event)
-        }
-
         switch type {
         case .keyDown:
             let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
             let reverse = event.flags.contains(.maskShift)
-
-            // Space switching is discrete, not a held cycle: there is no public way to
-            // enumerate Spaces, so there is nothing to show a list of and nothing to
-            // commit on release. One press, one step.
-            let space = Preferences.spaceShortcut
-            if keyCode == space.keyCode, space.matches(flags: event.flags) {
-                report.add("space: \(reverse ? "previous" : "next")")
-                SpaceSwitcher.move(next: !reverse)
-                return nil
-            }
 
             for (shortcut, scope) in [
                 (Preferences.allWindowsShortcut, Scope.allWindows),

@@ -102,16 +102,6 @@ enum Preferences {
         set { store(newValue, "shortcutSameApp") }
     }
 
-    /// Moves to the next Space. Defaults to Control+Tab.
-    ///
-    /// Worth knowing before keeping the default: Control+Tab is how browsers and editors
-    /// switch their own tabs, and a global trigger takes it away from all of them. It is
-    /// rebindable for exactly that reason.
-    static var spaceShortcut: Shortcut {
-        get { shortcut("shortcutSpace") ?? Shortcut(keyCode: 48, modifiers: .maskControl) }
-        set { store(newValue, "shortcutSpace") }
-    }
-
     private static func shortcut(_ key: String) -> Shortcut? {
         UserDefaults.standard.string(forKey: key).flatMap(Shortcut.init(storage:))
     }

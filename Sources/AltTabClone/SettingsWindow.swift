@@ -38,9 +38,6 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             row("All windows", recorder(Preferences.allWindowsShortcut) { Preferences.allWindowsShortcut = $0 }),
             row("Current app", recorder(Preferences.sameAppShortcut) { Preferences.sameAppShortcut = $0 }),
             hint("Hold the modifier, tap the key, release to switch."),
-            row("Next Space", recorder(Preferences.spaceShortcut) { Preferences.spaceShortcut = $0 }),
-            hint("One press per Space; add Shift to go back. Needs Mission Control's\n"
-                 + "\"Move left/right a space\" shortcuts enabled."),
 
             section("Appearance"),
             row("Layout", segmented(PanelLayout.allCases.map(\.label), selected: index(of: Preferences.layout)) { index in
@@ -64,12 +61,25 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
         let content = NSView()
         content.addSubview(form)
+        // Pinned on all four edges, so the form drives the window's size instead of being
+        // clipped by whatever height the window was created with.
         NSLayoutConstraint.activate([
             form.leadingAnchor.constraint(equalTo: content.leadingAnchor),
             form.trailingAnchor.constraint(equalTo: content.trailingAnchor),
             form.topAnchor.constraint(equalTo: content.topAnchor),
+            form.bottomAnchor.constraint(equalTo: content.bottomAnchor),
         ])
         window.contentView = content
+
+        // Width is fixed and only the height is measured. Letting the form decide both
+        // makes the window as wide as its longest line of explanatory text, which is a
+        // terrible way to choose a window width.
+        //
+        // Sized to fit rather than scrolled: this form is short enough to show whole on
+        // any screen, and a scroll view would hide settings behind a gesture for no gain.
+        let width: CGFloat = 460
+        form.widthAnchor.constraint(equalToConstant: width).isActive = true
+        window.setContentSize(NSSize(width: width, height: form.fittingSize.height))
 
         return window
     }

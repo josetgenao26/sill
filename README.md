@@ -93,8 +93,24 @@ handles that support `kAXRaiseAction`, which the switcher needs to actually chan
 
 ## Known gaps
 
-These are deliberate omissions at this stage, not bugs:
-
-- Windows on other Spaces are not visible (requires private CoreGraphics APIs).
-- Fullscreen windows are not handled.
+- **Windows on other Spaces are not listed.** In a full-screen Space the switcher sees two
+  windows instead of twelve. The Accessibility API only reports windows on the current
+  Space. `CGWindowListCopyWindowInfo(.optionAll)` does see across Spaces, but raising a
+  window needs an `AXUIElement`, which off-Space windows do not appear to have.
 - Apps that expose no Accessibility tree (some Electron, Java, and X11 hosts) are skipped.
+
+### Switching Spaces is not possible from a sandboxed public API
+
+Worth recording so it is not attempted again. macOS has no public API for changing Space,
+so the obvious workaround is to synthesise its own Control+Arrow shortcut. That does not
+work, and the reason is not a bug in the attempt:
+
+- The trigger fires and the code runs — it logs every time.
+- Posting works: the same code posting a plain `x` types an `x`.
+- Posting Control+Arrow changes nothing, from inside the event tap or from a menu action,
+  at the session tap or the HID tap.
+
+macOS accepts synthesised keystrokes but refuses to let them fire its own symbolic
+hotkeys. That is deliberate: otherwise any app could drive Mission Control and the Dock.
+The only remaining route is private CoreGraphics calls (`CGSSetWorkspace` and relatives),
+which is what AltTab uses.
