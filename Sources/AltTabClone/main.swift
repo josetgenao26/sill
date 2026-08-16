@@ -71,18 +71,25 @@ if arguments.contains("--hotkey") {
         exit(1)
     }
 
-    // Held in a binding: the status item lives only as long as this reference does, and
-    // releasing it would silently remove the icon from the menu bar.
     let statusBar = StatusBarController(history: history, report: report)
-    _ = statusBar
 
     report.add("Hold Option and press Tab to cycle. Release Option to switch.")
     report.add("Shift reverses direction, Escape cancels.")
     report.add("Quit from the menu bar icon, or: pkill -f AltTabClone")
     report.add()
 
-    RunLoop.current.run()
-    exit(0)
+    // ARC ends an object's life after its last use, not at the end of its lexical scope.
+    // These three are never referenced again — the tap and the observers call into them
+    // from C callbacks that deliberately hold no reference — so without an explicit
+    // lifetime the optimiser is free to release them before the run loop even starts.
+    withExtendedLifetime((statusBar, monitor, tracker)) {
+        // NSApplication.run(), not RunLoop.run(). A bare run loop pumps run loop *sources*,
+        // which is enough for the event tap and the AX observers, so the switcher works and
+        // the menu bar icon even draws. But AppKit's UI event dispatch lives in
+        // NSApplication's own loop: without it a click on the status item is never
+        // delivered to anything, and the menu silently refuses to open.
+        application.run()
+    }
 }
 
 // MARK: - List

@@ -24,10 +24,20 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         self.report = report
         super.init()
 
-        item.button?.image = NSImage(
-            systemSymbolName: "square.stack",
-            accessibilityDescription: "AltTabClone"
-        )
+        let icon = NSImage(systemSymbolName: "square.stack", accessibilityDescription: "AltTabClone")
+        item.button?.image = icon
+        item.button?.imagePosition = .imageLeading
+
+        // Carries a text label as well as the icon. A button with neither has zero width —
+        // present in the menu bar but invisible and unclickable — and on a crowded or
+        // notched menu bar a narrow icon-only item is easy to lose entirely.
+        item.button?.title = " ATC"
+
+        // Lets macOS remember where the user put this item between launches, so it does
+        // not reappear in a different slot after every rebuild.
+        item.autosaveName = "AltTabCloneStatusItem"
+
+        report.add("status item — button: \(item.button != nil), icon: \(icon != nil)")
 
         let menu = NSMenu()
         menu.delegate = self
@@ -53,6 +63,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     /// costs synchronous calls into every running app, which is not something to do on a
     /// timer for a label nobody is looking at.
     func menuWillOpen(_ menu: NSMenu) {
+        report.add("menu opened")
         let count = WindowEnumerator.allWindows().count
         windowCountItem.title = "\(count) window\(count == 1 ? "" : "s")"
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
