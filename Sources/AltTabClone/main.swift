@@ -71,9 +71,14 @@ if arguments.contains("--hotkey") {
         exit(1)
     }
 
+    // Held in a binding: the status item lives only as long as this reference does, and
+    // releasing it would silently remove the icon from the menu bar.
+    let statusBar = StatusBarController(history: history, report: report)
+    _ = statusBar
+
     report.add("Hold Option and press Tab to cycle. Release Option to switch.")
     report.add("Shift reverses direction, Escape cancels.")
-    report.add("Running until killed: pkill -f AltTabClone")
+    report.add("Quit from the menu bar icon, or: pkill -f AltTabClone")
     report.add()
 
     RunLoop.current.run()
