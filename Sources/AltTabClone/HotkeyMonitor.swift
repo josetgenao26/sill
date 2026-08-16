@@ -19,6 +19,7 @@ final class HotkeyMonitor {
 
     private let report: Report
     private let history: WindowHistory
+    private let panel = SwitcherPanel()
     private var tap: CFMachPort?
 
     /// Windows are snapshotted when cycling starts, not re-read on every Tab. Re-reading
@@ -122,9 +123,11 @@ final class HotkeyMonitor {
             // is what makes a single Option+Tab toggle back and forth.
             selection = snapshot.count > 1 ? 1 : 0
             report.add("cycle start — \(snapshot.count) windows (MRU order)")
+            panel.show(snapshot, selection: selection)
         } else {
             let step = reverse ? -1 : 1
             selection = (selection + step + snapshot.count) % snapshot.count
+            panel.highlight(selection)
         }
 
         let window = snapshot[selection]
@@ -134,6 +137,7 @@ final class HotkeyMonitor {
 
     private func commit() {
         defer { isCycling = false }
+        panel.hide()
         guard let target = snapshot[safe: selection] else { return }
 
         report.add("commit → \(target.appName) — \(target.title)")
@@ -148,6 +152,7 @@ final class HotkeyMonitor {
 
     private func cancel() {
         isCycling = false
+        panel.hide()
         report.add("cancelled")
     }
 }
