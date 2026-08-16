@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#16150F"></rect>
+  <g transform="translate(4 4) scale(1.5)">
+    <mask id="fa"><rect width="16" height="16" fill="#fff"></rect><rect x="3" y="3" width="10" height="10" rx="2.4" fill="#000"></rect><rect x="5.7" y="5.7" width="10" height="10" rx="2.4" fill="#000"></rect></mask>
+    <mask id="fb"><rect width="16" height="16" fill="#fff"></rect><rect x="5.7" y="5.7" width="10" height="10" rx="2.4" fill="#000"></rect></mask>
+    <rect x="1.2" y="1.2" width="8.2" height="8.2" rx="1.5" fill="none" stroke="#F6DCAE" stroke-width="1.2" mask="url(#fa)"></rect>
+    <rect x="3.9" y="3.9" width="8.2" height="8.2" rx="1.5" fill="none" stroke="#F6DCAE" stroke-width="1.2" mask="url(#fb)"></rect>
+    <rect x="6.6" y="6.6" width="8.2" height="8.2" rx="1.5" fill="#F6DCAE"></rect>
+  </g>
+</svg>
