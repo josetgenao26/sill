@@ -64,6 +64,15 @@ enum WindowEnumerator {
         let appName = app.localizedName ?? "Unknown"
         return windows.compactMap { window in
             AXUIElementSetMessagingTimeout(window, messagingTimeout)
+
+            // Only real, switchable windows. The clearest case this removes is Finder's
+            // desktop window, which enumerates like any other window but refuses
+            // kAXRaiseAction — it was silently occupying a slot in the list and doing
+            // nothing when selected. Sheets, popovers and drawers fail the same check.
+            guard AX.attribute(window, kAXSubroleAttribute as String) == kAXStandardWindowSubrole else {
+                return nil
+            }
+
             guard let frame = AX.frame(of: window) else { return nil }
             return WindowInfo(
                 appName: appName,
