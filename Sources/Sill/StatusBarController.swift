@@ -33,14 +33,22 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         self.report = report
         super.init()
 
-        let icon = NSImage(systemSymbolName: "square.stack", accessibilityDescription: "Sill")
+        // A PDF rather than a PNG so macOS rasterises it per display scale, and marked as a
+        // template so the system tints it — black on a light menu bar, white on a dark one.
+        // Without isTemplate the mark would stay black and vanish in dark mode.
+        let icon = Bundle.main.url(forResource: "menubar-template", withExtension: "pdf")
+            .flatMap { NSImage(contentsOf: $0) }
+            ?? NSImage(systemSymbolName: "square.stack", accessibilityDescription: "Sill")
+        icon?.isTemplate = true
+        icon?.size = NSSize(width: 16, height: 16)
         item.button?.image = icon
-        item.button?.imagePosition = .imageLeading
 
-        // Carries a text label as well as the icon. A button with neither has zero width —
-        // present in the menu bar but invisible and unclickable — and on a crowded or
-        // notched menu bar a narrow icon-only item is easy to lose entirely.
-        item.button?.title = " Sill"
+        // A button with neither image nor title has zero width: present in the menu bar,
+        // but invisible and unclickable. Keeping a title as well would only be noise now
+        // that there is a real mark, so the fallback covers the icon failing to load.
+        if icon == nil {
+            item.button?.title = "Sill"
+        }
 
         // Lets macOS remember where the user put this item between launches, so it does
         // not reappear in a different slot after every rebuild.

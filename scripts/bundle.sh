@@ -38,6 +38,12 @@ mkdir -p "$APP/Contents/MacOS"
 cp "$BINARY" "$APP/Contents/MacOS/Sill"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 
+mkdir -p "$APP/Contents/Resources"
+cp "$ROOT/Resources/Sill.icns" "$APP/Contents/Resources/"
+# The menu bar mark ships as a PDF so macOS can rasterise it per display scale. Loaded as
+# a template image, which is what lets the system invert it in dark mode.
+cp "$ROOT/Resources/menubar-template.pdf" "$APP/Contents/Resources/"
+
 # Prefer a stable self-signed certificate over an ad-hoc signature.
 #
 # An ad-hoc signature makes the binary hash the identity, so every rebuild looks like a

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 16 16" fill="none">
+  <mask id="ka"><rect width="16" height="16" fill="#fff"></rect><rect x="3" y="3" width="10" height="10" rx="2.4" fill="#000"></rect><rect x="5.7" y="5.7" width="10" height="10" rx="2.4" fill="#000"></rect></mask>
+  <mask id="kb"><rect width="16" height="16" fill="#fff"></rect><rect x="5.7" y="5.7" width="10" height="10" rx="2.4" fill="#000"></rect></mask>
+  <rect x="1.2" y="1.2" width="8.2" height="8.2" rx="1.5" stroke="currentColor" stroke-width="1.2" mask="url(#ka)"></rect>
+  <rect x="3.9" y="3.9" width="8.2" height="8.2" rx="1.5" stroke="currentColor" stroke-width="1.2" mask="url(#kb)"></rect>
+  <rect x="6.6" y="6.6" width="8.2" height="8.2" rx="1.5" fill="currentColor"></rect>
+</svg>
