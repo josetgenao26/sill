@@ -21,9 +21,23 @@ mkdir -p "$APP/Contents/MacOS"
 cp "$BINARY" "$APP/Contents/MacOS/AltTabClone"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 
-# Ad-hoc signature ("-") with an explicit identifier. Ad-hoc is enough for local
-# development; a self-signed certificate becomes worthwhile only if macOS starts
-# re-prompting for permission on every rebuild.
-codesign --force --sign - --identifier "$IDENTIFIER" "$APP"
+# Prefer a stable self-signed certificate over an ad-hoc signature.
+#
+# An ad-hoc signature makes the binary hash the identity, so every rebuild looks like a
+# different app to macOS and the Accessibility grant is revoked. A certificate keeps the
+# identity stable across rebuilds, so the permission is granted once.
+#
+# Create one in Keychain Access > Certificate Assistant > Create a Certificate:
+#   Name: AltTabCloneDev / Identity Type: Self Signed Root / Type: Code Signing
+SIGN_IDENTITY="${SIGN_IDENTITY:-AltTabCloneDev}"
+
+if security find-identity -v -p codesigning | grep -q "$SIGN_IDENTITY"; then
+    codesign --force --sign "$SIGN_IDENTITY" --identifier "$IDENTIFIER" "$APP"
+    echo "Signed with '$SIGN_IDENTITY' — Accessibility permission survives rebuilds."
+else
+    codesign --force --sign - --identifier "$IDENTIFIER" "$APP"
+    echo "WARNING: no '$SIGN_IDENTITY' certificate found; fell back to an ad-hoc signature."
+    echo "         Accessibility permission will be revoked on every rebuild."
+fi
 
 echo "Built $APP"

@@ -8,27 +8,50 @@ underneath: the Accessibility API, ScreenCaptureKit, and event taps.
 Step 1 — enumerate windows through the Accessibility API and print them.
 No UI, no hotkey, no thumbnails yet.
 
+## One-time setup: a signing certificate
+
+Do this before the first build, or the Accessibility permission has to be granted again
+after every single rebuild.
+
+In **Keychain Access > Certificate Assistant > Create a Certificate...**:
+
+- **Name**: `AltTabCloneDev`
+- **Identity Type**: `Self Signed Root`
+- **Certificate Type**: `Code Signing`
+
+Verify it exists:
+
+```bash
+security find-identity -v -p codesigning
+```
+
 ## Build and run
 
 ```bash
 ./scripts/bundle.sh
-./build/AltTabClone.app/Contents/MacOS/AltTabClone
+open build/AltTabClone.app
+tail -f ~/Library/Logs/AltTabClone.log
 ```
 
-The first run exits asking for permission. Grant it in
-**System Settings > Privacy & Security > Accessibility**, then run it again.
+The first run waits up to 90 seconds for permission. Enable **AltTabClone** in
+**System Settings > Privacy & Security > Accessibility** and the run continues on its own.
+
+Launch with `open`, not by executable path: running it from a shell makes macOS attribute
+the Accessibility request to the parent terminal instead of to this app. Because `open`
+detaches stdout, results go to `~/Library/Logs/AltTabClone.log`.
 
 ## Why a .app bundle instead of a bare executable
 
-macOS grants Accessibility permission to a *code identity*, not to a file path. A bare
-executable gets a new identity on every rebuild, so the permission is revoked each time
-and has to be granted again.
+macOS grants Accessibility permission to a *code identity*, not to a file path.
 
-`scripts/bundle.sh` wraps the binary in a .app and signs it with a fixed
-`--identifier`, which keeps the grant stable across rebuilds.
+An ad-hoc signature makes the binary hash the identity, so every rebuild reads as a
+different app and the grant is revoked. A self-signed certificate keeps the identity
+stable, so permission is granted once and survives rebuilds.
 
-If macOS ever starts re-prompting anyway, replace the ad-hoc signature (`--sign -`) with
-a self-signed certificate from Keychain Access.
+`scripts/bundle.sh` uses the certificate when present and warns loudly when it is not.
+
+If a rebuild ever does invalidate the entry, remove **AltTabClone** from the Accessibility
+list with the minus button and add it back — toggling it off and on is not always enough.
 
 ## Why the Accessibility API and not CGWindowList
 

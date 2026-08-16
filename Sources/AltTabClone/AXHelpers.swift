@@ -60,4 +60,21 @@ enum AX {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: prompt]
         return AXIsProcessTrustedWithOptions(options as CFDictionary)
     }
+
+    /// Prompts for Accessibility permission and waits for the user to grant it.
+    ///
+    /// The prompt is fire-and-forget: `AXIsProcessTrustedWithOptions` returns false
+    /// immediately while the dialog is still on screen. Without this wait the process
+    /// would exit before the user finished, forcing a rerun after every grant. Polling
+    /// is the only option here — the API publishes no notification for the transition.
+    static func waitForTrust(timeout: TimeInterval) -> Bool {
+        if isTrusted(prompt: true) { return true }
+
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.5)
+            if isTrusted(prompt: false) { return true }
+        }
+        return false
+    }
 }
