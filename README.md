@@ -6,6 +6,8 @@ the same app, which the built-in Command+Tab collapses into a single icon.
 Built from scratch to learn how macOS window management actually works underneath: the
 Accessibility API, ScreenCaptureKit, event taps, and the permission system around them.
 
+**[Website](https://josetgenao26.github.io/sill/)** · **[Download](https://github.com/josetgenao26/sill/releases/latest)**
+
 ## Why
 
 `Command+Tab` switches between **applications**. If you have three editor windows open on
