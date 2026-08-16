@@ -1,0 +1,6 @@
+.build/
+build/
+.swiftpm/
+.DS_Store
+.atl/.skill-registry.cache.json
+*.xcuserstate
