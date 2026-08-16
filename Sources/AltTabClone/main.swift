@@ -49,10 +49,14 @@ guard AX.waitForTrust(timeout: 300) else {
 // MARK: - Hotkey mode
 
 if arguments.contains("--hotkey") {
-    /// The tap consumes keystrokes, so the process is deliberately short-lived while this
-    /// is under development: a bug that swallowed the wrong keys would otherwise persist
-    /// until the process was hunted down and killed.
-    let lifetime: TimeInterval = 120
+    // Runs until killed. The bounded lifetime this had was a safety net while the event tap
+    // was unproven, since a tap swallowing the wrong keys would leave the machine without a
+    // keyboard. It only ever consumes Tab while Option is held, and that has held across
+    // repeated sessions.
+    //
+    // Running indefinitely is not just convenience: MRU ordering is accumulated by watching
+    // focus over time, so a switcher that only lives for two minutes has no history to
+    // order by and cannot answer "the window I was in before".
 
     // Tracking has to start before the first gesture: ordering is accumulated from focus
     // changes over time, so history is empty until the user has switched around a little.
@@ -69,14 +73,10 @@ if arguments.contains("--hotkey") {
 
     report.add("Hold Option and press Tab to cycle. Release Option to switch.")
     report.add("Shift reverses direction, Escape cancels.")
-    report.add("Exits automatically after \(Int(lifetime))s.")
+    report.add("Running until killed: pkill -f AltTabClone")
     report.add()
 
-    pump(lifetime)
-
-    report.add()
-    report.add("Lifetime elapsed — exiting.")
-    report.close()
+    RunLoop.current.run()
     exit(0)
 }
 

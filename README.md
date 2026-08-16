@@ -5,8 +5,40 @@ underneath: the Accessibility API, ScreenCaptureKit, and event taps.
 
 ## Status
 
-Step 1 — enumerate windows through the Accessibility API and print them.
-No UI, no hotkey, no thumbnails yet.
+Working switcher: window enumeration, most-recently-used ordering, an Option+Tab held
+gesture with forward and reverse cycling, a floating panel, and focus switching.
+
+No thumbnails yet, and it is not yet installed to launch at login.
+
+## Using it
+
+```bash
+./scripts/bundle.sh
+open build/AltTabClone.app --args --hotkey
+```
+
+- **Hold Option, press Tab** — cycle forward
+- **Shift+Tab** while holding Option — cycle backward
+- **Release Option** — switch to the highlighted window
+- **Escape** — cancel
+
+It runs until killed:
+
+```bash
+pkill -f AltTabClone
+```
+
+Start it before you need it. Ordering is built by watching focus over time, so a switcher
+that just launched has no history and cannot know which window you were in before.
+
+Activity is logged to `~/Library/Logs/AltTabClone.log`.
+
+### Other modes
+
+```bash
+open build/AltTabClone.app                     # list windows, then exit
+open build/AltTabClone.app --args --raise 3    # raise one window by index
+```
 
 ## One-time setup: a signing certificate
 
