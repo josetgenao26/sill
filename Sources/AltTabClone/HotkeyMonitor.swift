@@ -15,6 +15,18 @@ final class HotkeyMonitor {
     private enum Key {
         static let tab: Int64 = 48
         static let escape: Int64 = 53
+        /// The key above Tab, mirroring the system's own Command+` for same-app cycling.
+        static let grave: Int64 = 50
+    }
+
+    /// Which windows a gesture cycles through.
+    ///
+    /// Both scopes share one state machine — only the snapshot taken at the start of a
+    /// cycle differs — because the gesture, the reverse direction, the commit on release
+    /// and the cancel are all identical.
+    private enum Scope {
+        case allWindows
+        case currentApp
     }
 
     private let report: Report
@@ -34,6 +46,19 @@ final class HotkeyMonitor {
         self.report = report
         self.history = history
         self.thumbnails = thumbnails
+
+        // Pointing at an entry selects it, so releasing Option commits whatever is under
+        // the cursor. Clicking commits straight away, without waiting for the release.
+        panel.onHover = { [weak self] index in
+            guard let self, isCycling else { return }
+            selection = index
+            panel.highlight(index)
+        }
+        panel.onClick = { [weak self] index in
+            guard let self, isCycling else { return }
+            selection = index
+            commit()
+        }
     }
 
     // MARK: - Lifecycle
@@ -89,8 +114,12 @@ final class HotkeyMonitor {
             let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
 
             if keyCode == Key.tab, optionHeld {
-                advance(reverse: event.flags.contains(.maskShift))
+                advance(reverse: event.flags.contains(.maskShift), scope: .allWindows)
                 return nil  // consumed: the focused app must not also receive this Tab
+            }
+            if keyCode == Key.grave, optionHeld {
+                advance(reverse: event.flags.contains(.maskShift), scope: .currentApp)
+                return nil
             }
             if keyCode == Key.escape, isCycling {
                 cancel()
@@ -113,11 +142,21 @@ final class HotkeyMonitor {
 
     // MARK: - State machine
 
-    private func advance(reverse: Bool) {
+    private func advance(reverse: Bool, scope: Scope) {
         if !isCycling {
             let live = WindowEnumerator.allWindows()
             history.prune(keeping: live)
-            snapshot = history.sorted(live)
+
+            // The scope is fixed when the cycle begins. Reading it per keystroke would let
+            // the set change underneath the user as raising moves focus to another app.
+            switch scope {
+            case .allWindows:
+                snapshot = history.sorted(live)
+            case .currentApp:
+                let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier
+                snapshot = history.sorted(live.filter { $0.pid == pid })
+            }
+
             guard !snapshot.isEmpty else { return }
             isCycling = true
             // Start on the second window. With MRU ordering the first entry is the window
@@ -125,7 +164,7 @@ final class HotkeyMonitor {
             // is what makes a single Option+Tab toggle back and forth.
             selection = snapshot.count > 1 ? 1 : 0
             let layout = Preferences.layout
-            report.add("cycle start — \(snapshot.count) windows (MRU order, \(layout.rawValue))")
+            report.add("cycle start — \(snapshot.count) windows (\(scope), \(layout.rawValue))")
 
             // Shown immediately with whatever is already cached. Captures are fetched
             // afterwards and dropped in as they arrive, so the panel never waits on
@@ -134,10 +173,10 @@ final class HotkeyMonitor {
                 snapshot,
                 selection: selection,
                 layout: layout,
-                thumbnails: layout == .thumbnails ? thumbnails : nil
+                thumbnails: layout.needsCapture ? thumbnails : nil
             )
 
-            if layout == .thumbnails {
+            if layout.needsCapture {
                 thumbnails.fetch(for: snapshot) { [weak self] key, image in
                     self?.panel.setThumbnail(image, for: key)
                 }

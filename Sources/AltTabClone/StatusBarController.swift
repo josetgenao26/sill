@@ -19,12 +19,14 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         keyEquivalent: ""
     )
 
-    /// Layout is a radio choice, so both options are always visible with a checkmark on
-    /// the active one. A single toggle would hide which layout you are about to get.
-    private let layoutItems: [NSMenuItem] = [
-        NSMenuItem(title: "List", action: #selector(chooseLayout(_:)), keyEquivalent: ""),
-        NSMenuItem(title: "Thumbnails", action: #selector(chooseLayout(_:)), keyEquivalent: ""),
-    ]
+    /// Layout is also offered here, not only in settings: switching between reading titles
+    /// and recognising previews is a per-moment decision, and making it a trip through a
+    /// settings window would put friction on the one setting people flip most.
+    private let layoutItems: [NSMenuItem] = PanelLayout.allCases.map {
+        NSMenuItem(title: $0.label, action: #selector(chooseLayout(_:)), keyEquivalent: "")
+    }
+
+    private let settings = SettingsWindow()
 
     init(history: WindowHistory, report: Report) {
         self.history = history
@@ -61,6 +63,10 @@ final class StatusBarController: NSObject, NSMenuDelegate {
 
         loginItem.target = self
         menu.addItem(loginItem)
+
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
         menu.addItem(.separator())
 
         let quit = NSMenuItem(title: "Quit AltTabClone", action: #selector(quit), keyEquivalent: "q")
@@ -82,21 +88,23 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
 
         let layout = Preferences.layout
-        layoutItems[0].state = layout == .list ? .on : .off
-        layoutItems[1].state = layout == .thumbnails ? .on : .off
+        for (item, candidate) in zip(layoutItems, PanelLayout.allCases) {
+            item.state = candidate == layout ? .on : .off
+        }
     }
 
     // MARK: - Actions
 
     @objc private func chooseLayout(_ sender: NSMenuItem) {
-        let layout: PanelLayout = sender === layoutItems[1] ? .thumbnails : .list
+        guard let position = layoutItems.firstIndex(of: sender) else { return }
+        let layout = PanelLayout.allCases[position]
         Preferences.layout = layout
         report.add("layout: \(layout.rawValue)")
 
-        // Screen recording is only needed for previews, so it is requested when the user
-        // actually asks for them rather than at launch. Unlike Accessibility this cannot
-        // be polled — the prompt appears once and the user has to act on it.
-        if layout == .thumbnails, !ThumbnailProvider.hasPermission() {
+        // Screen recording is only needed for captures, so it is requested when the user
+        // asks for a layout that uses them rather than at launch. Unlike Accessibility
+        // this cannot be polled — the prompt appears once and the user has to act on it.
+        if layout.needsCapture, !ThumbnailProvider.hasPermission() {
             report.add("screen recording not granted — prompting")
             ThumbnailProvider.requestPermission()
         }
@@ -117,6 +125,10 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             // directory certainly is. Surfacing it beats failing silently.
             report.add("launch at login failed: \(error.localizedDescription)")
         }
+    }
+
+    @objc private func openSettings() {
+        settings.show()
     }
 
     @objc private func quit() {
