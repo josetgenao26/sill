@@ -20,6 +20,7 @@ final class HotkeyMonitor {
     private let report: Report
     private let history: WindowHistory
     private let panel = SwitcherPanel()
+    private let thumbnails: ThumbnailProvider
     private var tap: CFMachPort?
 
     /// Windows are snapshotted when cycling starts, not re-read on every Tab. Re-reading
@@ -29,9 +30,10 @@ final class HotkeyMonitor {
     private var selection = 0
     private var isCycling = false
 
-    init(report: Report, history: WindowHistory) {
+    init(report: Report, history: WindowHistory, thumbnails: ThumbnailProvider) {
         self.report = report
         self.history = history
+        self.thumbnails = thumbnails
     }
 
     // MARK: - Lifecycle
@@ -122,8 +124,24 @@ final class HotkeyMonitor {
             // already in use, so the second is the one the user was in before it — which
             // is what makes a single Option+Tab toggle back and forth.
             selection = snapshot.count > 1 ? 1 : 0
-            report.add("cycle start — \(snapshot.count) windows (MRU order)")
-            panel.show(snapshot, selection: selection)
+            let layout = Preferences.layout
+            report.add("cycle start — \(snapshot.count) windows (MRU order, \(layout.rawValue))")
+
+            // Shown immediately with whatever is already cached. Captures are fetched
+            // afterwards and dropped in as they arrive, so the panel never waits on
+            // ScreenCaptureKit before appearing.
+            panel.show(
+                snapshot,
+                selection: selection,
+                layout: layout,
+                thumbnails: layout == .thumbnails ? thumbnails : nil
+            )
+
+            if layout == .thumbnails {
+                thumbnails.fetch(for: snapshot) { [weak self] key, image in
+                    self?.panel.setThumbnail(image, for: key)
+                }
+            }
         } else {
             let step = reverse ? -1 : 1
             selection = (selection + step + snapshot.count) % snapshot.count

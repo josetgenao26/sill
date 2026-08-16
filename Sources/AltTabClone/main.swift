@@ -1,15 +1,12 @@
 import AppKit
 import Foundation
 
-// Probe driver. Three modes, each verifying one layer before the next is built on it:
+// Entry point. One mode runs the switcher; the other two remain as probes, because being
+// able to test enumeration and raising in isolation is what made each layer debuggable.
 //
-//   open build/AltTabClone.app                     list windows
-//   open build/AltTabClone.app --args --raise 3    raise and focus one window
-//   open build/AltTabClone.app --args --hotkey     Option+Tab switching, no UI yet
-//
-// The hotkey mode logs its selection instead of drawing it. Whether the state machine
-// tracks the gesture correctly is a separate question from how it looks, and mixing the
-// two would make a failure in either one hard to attribute.
+//   open build/AltTabClone.app --args --hotkey     run the switcher
+//   open build/AltTabClone.app                     list windows, then exit
+//   open build/AltTabClone.app --args --raise 3    raise one window by index
 
 let arguments = CommandLine.arguments
 
@@ -64,7 +61,8 @@ if arguments.contains("--hotkey") {
     let tracker = FocusTracker(history: history, report: report)
     tracker.start()
 
-    let monitor = HotkeyMonitor(report: report, history: history)
+    let thumbnails = ThumbnailProvider(report: report)
+    let monitor = HotkeyMonitor(report: report, history: history, thumbnails: thumbnails)
     guard monitor.start() else {
         report.add("Could not install the event tap.")
         report.close()

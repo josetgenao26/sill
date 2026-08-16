@@ -19,6 +19,13 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         keyEquivalent: ""
     )
 
+    /// Layout is a radio choice, so both options are always visible with a checkmark on
+    /// the active one. A single toggle would hide which layout you are about to get.
+    private let layoutItems: [NSMenuItem] = [
+        NSMenuItem(title: "List", action: #selector(chooseLayout(_:)), keyEquivalent: ""),
+        NSMenuItem(title: "Thumbnails", action: #selector(chooseLayout(_:)), keyEquivalent: ""),
+    ]
+
     init(history: WindowHistory, report: Report) {
         self.history = history
         self.report = report
@@ -46,6 +53,12 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         menu.addItem(windowCountItem)
         menu.addItem(.separator())
 
+        for item in layoutItems {
+            item.target = self
+            menu.addItem(item)
+        }
+        menu.addItem(.separator())
+
         loginItem.target = self
         menu.addItem(loginItem)
         menu.addItem(.separator())
@@ -67,9 +80,27 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         let count = WindowEnumerator.allWindows().count
         windowCountItem.title = "\(count) window\(count == 1 ? "" : "s")"
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
+
+        let layout = Preferences.layout
+        layoutItems[0].state = layout == .list ? .on : .off
+        layoutItems[1].state = layout == .thumbnails ? .on : .off
     }
 
     // MARK: - Actions
+
+    @objc private func chooseLayout(_ sender: NSMenuItem) {
+        let layout: PanelLayout = sender === layoutItems[1] ? .thumbnails : .list
+        Preferences.layout = layout
+        report.add("layout: \(layout.rawValue)")
+
+        // Screen recording is only needed for previews, so it is requested when the user
+        // actually asks for them rather than at launch. Unlike Accessibility this cannot
+        // be polled — the prompt appears once and the user has to act on it.
+        if layout == .thumbnails, !ThumbnailProvider.hasPermission() {
+            report.add("screen recording not granted — prompting")
+            ThumbnailProvider.requestPermission()
+        }
+    }
 
     @objc private func toggleLaunchAtLogin() {
         let service = SMAppService.mainApp
