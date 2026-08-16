@@ -28,13 +28,9 @@ final class StatusBarController: NSObject, NSMenuDelegate {
 
     private let settings = SettingsWindow()
 
-    /// Holds the panel open for long enough to photograph it.
-    private let onShowPanel: (TimeInterval) -> Void
-
-    init(history: WindowHistory, report: Report, onShowPanel: @escaping (TimeInterval) -> Void) {
+    init(history: WindowHistory, report: Report) {
         self.history = history
         self.report = report
-        self.onShowPanel = onShowPanel
         super.init()
 
         let icon = NSImage(systemSymbolName: "square.stack", accessibilityDescription: "Sill")
@@ -63,13 +59,6 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             item.target = self
             menu.addItem(item)
         }
-
-        // Next to the layout choice on purpose. Photographing each layout means switching
-        // layout and then holding the panel open, over and over — putting the two controls
-        // anywhere else turns that into a relaunch per screenshot.
-        let holdItem = NSMenuItem(title: "Hold Panel Open (20s)", action: #selector(holdPanel), keyEquivalent: "")
-        holdItem.target = self
-        menu.addItem(holdItem)
 
         menu.addItem(.separator())
 
@@ -137,10 +126,6 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             // directory certainly is. Surfacing it beats failing silently.
             report.add("launch at login failed: \(error.localizedDescription)")
         }
-    }
-
-    @objc private func holdPanel() {
-        onShowPanel(20)
     }
 
     @objc private func openSettings() {
