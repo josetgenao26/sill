@@ -54,7 +54,13 @@ if arguments.contains("--hotkey") {
     /// until the process was hunted down and killed.
     let lifetime: TimeInterval = 120
 
-    let monitor = HotkeyMonitor(report: report)
+    // Tracking has to start before the first gesture: ordering is accumulated from focus
+    // changes over time, so history is empty until the user has switched around a little.
+    let history = WindowHistory()
+    let tracker = FocusTracker(history: history, report: report)
+    tracker.start()
+
+    let monitor = HotkeyMonitor(report: report, history: history)
     guard monitor.start() else {
         report.add("Could not install the event tap.")
         report.close()

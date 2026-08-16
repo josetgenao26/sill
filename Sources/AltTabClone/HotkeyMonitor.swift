@@ -18,6 +18,7 @@ final class HotkeyMonitor {
     }
 
     private let report: Report
+    private let history: WindowHistory
     private var tap: CFMachPort?
 
     /// Windows are snapshotted when cycling starts, not re-read on every Tab. Re-reading
@@ -27,8 +28,9 @@ final class HotkeyMonitor {
     private var selection = 0
     private var isCycling = false
 
-    init(report: Report) {
+    init(report: Report, history: WindowHistory) {
         self.report = report
+        self.history = history
     }
 
     // MARK: - Lifecycle
@@ -110,13 +112,16 @@ final class HotkeyMonitor {
 
     private func advance(reverse: Bool) {
         if !isCycling {
-            snapshot = WindowEnumerator.allWindows()
+            let live = WindowEnumerator.allWindows()
+            history.prune(keeping: live)
+            snapshot = history.sorted(live)
             guard !snapshot.isEmpty else { return }
             isCycling = true
-            // Start on the second window: the first Tab should land on the previously
-            // used window, which is what makes a switcher useful for toggling.
+            // Start on the second window. With MRU ordering the first entry is the window
+            // already in use, so the second is the one the user was in before it — which
+            // is what makes a single Option+Tab toggle back and forth.
             selection = snapshot.count > 1 ? 1 : 0
-            report.add("cycle start — \(snapshot.count) windows")
+            report.add("cycle start — \(snapshot.count) windows (MRU order)")
         } else {
             let step = reverse ? -1 : 1
             selection = (selection + step + snapshot.count) % snapshot.count
@@ -134,6 +139,11 @@ final class HotkeyMonitor {
         report.add("commit → \(target.appName) — \(target.title)")
         let outcome = WindowRaiser.raise(target)
         report.add("  raised: \(outcome.raised), activated: \(outcome.activated)")
+
+        // Record directly rather than waiting for the observer to report our own switch.
+        // The notification may arrive after the next gesture starts, which would leave
+        // the ordering one step behind the user.
+        history.recordFocus(target.element)
     }
 
     private func cancel() {
