@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest something Sill should do
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Two things worth reading first, so you do not spend time on a request
+        that cannot be accepted:
+
+        - **Windows on other Spaces, and switching Spaces, are not possible**
+          with public macOS APIs. The README explains what was tried. Sill uses
+          no private APIs, and that is a deliberate line rather than a gap.
+        - Every setting in Sill changes real behaviour. A request for a toggle
+          needs a behaviour behind it.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve
+      description: >
+        Describe the situation you hit, not the feature you imagine. The
+        underlying problem often has a better solution than the one proposed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+    validations:
+      required: true

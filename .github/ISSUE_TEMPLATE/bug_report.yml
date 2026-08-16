@@ -1,0 +1,64 @@
+name: Bug report
+description: Something behaves differently from what the README describes
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Sill logs everything it does to `~/Library/Logs/Sill.log`. That log is
+        usually the difference between a bug that gets fixed and one that cannot
+        be reproduced — please include it.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+      placeholder: |
+        Held Option and pressed Tab. Expected the panel to appear. Nothing did.
+    validations:
+      required: true
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log output
+      description: >
+        Reproduce the problem, then paste the last ~30 lines of
+        `~/Library/Logs/Sill.log`. Run `tail -30 ~/Library/Logs/Sill.log`.
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "15.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: chip
+    attributes:
+      label: Mac
+      options: [Apple Silicon, Intel]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: layout
+    attributes:
+      label: Layout in use
+      options: [List, Thumbnails, App Icons, Not relevant]
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: permissions
+    attributes:
+      label: Permissions
+      options:
+        - label: Sill is enabled in System Settings → Privacy & Security → Accessibility
+          required: true
+        - label: I am running a build from Releases, not one I compiled myself
