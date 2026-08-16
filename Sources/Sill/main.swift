@@ -69,7 +69,9 @@ if arguments.contains("--hotkey") || arguments.contains("--demo") {
         exit(1)
     }
 
-    let statusBar = StatusBarController(history: history, report: report)
+    let statusBar = StatusBarController(history: history, report: report) { seconds in
+        monitor.showDemoPanel(seconds: seconds)
+    }
 
     report.add("Hold Option and press Tab to cycle. Release Option to switch.")
     report.add("Shift reverses direction, Escape cancels.")
