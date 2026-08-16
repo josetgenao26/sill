@@ -4,9 +4,9 @@ import Foundation
 // Entry point. One mode runs the switcher; the other two remain as probes, because being
 // able to test enumeration and raising in isolation is what made each layer debuggable.
 //
-//   open build/AltTabClone.app --args --hotkey     run the switcher
-//   open build/AltTabClone.app                     list windows, then exit
-//   open build/AltTabClone.app --args --raise 3    raise one window by index
+//   open build/Sill.app --args --hotkey     run the switcher
+//   open build/Sill.app                     list windows, then exit
+//   open build/Sill.app --args --raise 3    raise one window by index
 
 let arguments = CommandLine.arguments
 
@@ -38,7 +38,7 @@ func describe(_ window: WindowInfo, index: Int? = nil) -> String {
 
 guard AX.waitForTrust(timeout: 300) else {
     report.add("Accessibility: DENIED (timed out)")
-    report.add("Enable AltTabClone in System Settings > Privacy & Security > Accessibility.")
+    report.add("Enable Sill in System Settings > Privacy & Security > Accessibility.")
     report.close()
     exit(1)
 }
@@ -73,7 +73,7 @@ if arguments.contains("--hotkey") {
 
     report.add("Hold Option and press Tab to cycle. Release Option to switch.")
     report.add("Shift reverses direction, Escape cancels.")
-    report.add("Quit from the menu bar icon, or: pkill -f AltTabClone")
+    report.add("Quit from the menu bar icon, or: pkill -f Sill")
     report.add()
 
     // ARC ends an object's life after its last use, not at the end of its lexical scope.

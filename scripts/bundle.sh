@@ -10,15 +10,28 @@ set -euo pipefail
 
 CONFIG="${1:-debug}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP="$ROOT/build/AltTabClone.app"
-IDENTIFIER="com.josetgenao.alttabclone"
+APP="$ROOT/build/Sill.app"
+IDENTIFIER="com.josetgenao.sill"
 
-swift build --package-path "$ROOT" -c "$CONFIG"
-BINARY="$(swift build --package-path "$ROOT" -c "$CONFIG" --show-bin-path)/AltTabClone"
+# Release builds are universal; debug builds are not.
+#
+# Nothing in this app is Apple Silicon specific — Accessibility, ScreenCaptureKit, event
+# taps and AppKit all exist on Intel — but `swift build` targets only the host
+# architecture, so a default build simply will not launch on an Intel Mac.
+#
+# Building both roughly doubles compile time, which is the wrong trade during development
+# when the binary only ever runs on this machine. Release is where it matters.
+ARCHS=()
+if [ "$CONFIG" = "release" ]; then
+    ARCHS=(--arch arm64 --arch x86_64)
+fi
+
+swift build --package-path "$ROOT" -c "$CONFIG" "${ARCHS[@]}"
+BINARY="$(swift build --package-path "$ROOT" -c "$CONFIG" "${ARCHS[@]}" --show-bin-path)/Sill"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
-cp "$BINARY" "$APP/Contents/MacOS/AltTabClone"
+cp "$BINARY" "$APP/Contents/MacOS/Sill"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 
 # Prefer a stable self-signed certificate over an ad-hoc signature.
@@ -28,15 +41,27 @@ cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 # identity stable across rebuilds, so the permission is granted once.
 #
 # Create one in Keychain Access > Certificate Assistant > Create a Certificate:
-#   Name: AltTabCloneDev / Identity Type: Self Signed Root / Type: Code Signing
-SIGN_IDENTITY="${SIGN_IDENTITY:-AltTabCloneDev}"
+#   Name: SillDev / Identity Type: Self Signed Root / Type: Code Signing
+#
+# AltTabCloneDev is accepted as well: it is the certificate created under the project's
+# former name, and it signs just as well as a renamed one would. Which certificate signs a
+# local development build carries no meaning — forcing a new one would only mean granting
+# the Accessibility permission again for nothing.
+SIGN_IDENTITY=""
+for candidate in "${SIGN_IDENTITY_OVERRIDE:-}" SillDev AltTabCloneDev; do
+    [ -n "$candidate" ] || continue
+    if security find-identity -v -p codesigning | grep -q "$candidate"; then
+        SIGN_IDENTITY="$candidate"
+        break
+    fi
+done
 
-if security find-identity -v -p codesigning | grep -q "$SIGN_IDENTITY"; then
+if [ -n "$SIGN_IDENTITY" ]; then
     codesign --force --sign "$SIGN_IDENTITY" --identifier "$IDENTIFIER" "$APP"
     echo "Signed with '$SIGN_IDENTITY' — Accessibility permission survives rebuilds."
 else
     codesign --force --sign - --identifier "$IDENTIFIER" "$APP"
-    echo "WARNING: no '$SIGN_IDENTITY' certificate found; fell back to an ad-hoc signature."
+    echo "WARNING: no signing certificate found; fell back to an ad-hoc signature."
     echo "         Accessibility permission will be revoked on every rebuild."
 fi
 

@@ -29,7 +29,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "AltTabClone Settings"
+        window.title = "Sill Settings"
         window.delegate = self
         window.isReleasedWhenClosed = false
 

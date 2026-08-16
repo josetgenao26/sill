@@ -33,18 +33,18 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         self.report = report
         super.init()
 
-        let icon = NSImage(systemSymbolName: "square.stack", accessibilityDescription: "AltTabClone")
+        let icon = NSImage(systemSymbolName: "square.stack", accessibilityDescription: "Sill")
         item.button?.image = icon
         item.button?.imagePosition = .imageLeading
 
         // Carries a text label as well as the icon. A button with neither has zero width —
         // present in the menu bar but invisible and unclickable — and on a crowded or
         // notched menu bar a narrow icon-only item is easy to lose entirely.
-        item.button?.title = " ATC"
+        item.button?.title = " Sill"
 
         // Lets macOS remember where the user put this item between launches, so it does
         // not reappear in a different slot after every rebuild.
-        item.autosaveName = "AltTabCloneStatusItem"
+        item.autosaveName = "SillStatusItem"
 
         report.add("status item — button: \(item.button != nil), icon: \(icon != nil)")
 
@@ -69,7 +69,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         menu.addItem(settingsItem)
         menu.addItem(.separator())
 
-        let quit = NSMenuItem(title: "Quit AltTabClone", action: #selector(quit), keyEquivalent: "q")
+        let quit = NSMenuItem(title: "Quit Sill", action: #selector(quit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
 

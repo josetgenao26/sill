@@ -10,7 +10,7 @@ import Foundation
 /// log that is only written on completion says nothing about where it stopped.
 struct Report {
     static let logURL = URL(fileURLWithPath: NSHomeDirectory())
-        .appendingPathComponent("Library/Logs/AltTabClone.log")
+        .appendingPathComponent("Library/Logs/Sill.log")
 
     private let handle: FileHandle?
 
