@@ -1,22 +1,20 @@
 import AppKit
 import Foundation
 
-// Step 2 probe: prove a specific window can be raised and focused.
+// Probe driver. Three modes, each verifying one layer before the next is built on it:
 //
-// Enumerating windows is only useful if focus can be moved to one of them, so this
-// verifies the full path before any UI or hotkey handling is built.
+//   open build/AltTabClone.app                     list windows
+//   open build/AltTabClone.app --args --raise 3    raise and focus one window
+//   open build/AltTabClone.app --args --hotkey     Option+Tab switching, no UI yet
 //
-//   open build/AltTabClone.app --args --raise 3
-//
-// Focus is checked twice after the raise: which app is frontmost, and which of that app's
-// windows is now main. The second check is the one that matters — the whole premise of the
-// project is switching between windows of the *same* app, which share a pid and are
-// indistinguishable by the first check alone.
+// The hotkey mode logs its selection instead of drawing it. Whether the state machine
+// tracks the gesture correctly is a separate question from how it looks, and mixing the
+// two would make a failure in either one hard to attribute.
 
 let arguments = CommandLine.arguments
 
-// An accessory app has no Dock icon or menu bar but can still own windows, which is what
-// a switcher needs. NSApplication must exist before any window or activation work.
+// An accessory app has no Dock icon or menu bar but can still own windows and taps,
+// which is what a switcher needs. NSApplication must exist before any of that.
 let application = NSApplication.shared
 application.setActivationPolicy(.accessory)
 
@@ -41,20 +39,42 @@ func describe(_ window: WindowInfo, index: Int? = nil) -> String {
     return "  \(label)\(window.appName) — \(title)\(suffix)  pid:\(window.pid)"
 }
 
-report.add("Waiting for Accessibility permission...")
-
 guard AX.waitForTrust(timeout: 300) else {
     report.add("Accessibility: DENIED (timed out)")
-    report.add()
     report.add("Enable AltTabClone in System Settings > Privacy & Security > Accessibility.")
-    report.add("If it is already enabled, the entry is stale from a rebuild: remove it with")
-    report.add("the minus button and add it again.")
     report.close()
     exit(1)
 }
 
-report.add("Accessibility: granted")
-report.add()
+// MARK: - Hotkey mode
+
+if arguments.contains("--hotkey") {
+    /// The tap consumes keystrokes, so the process is deliberately short-lived while this
+    /// is under development: a bug that swallowed the wrong keys would otherwise persist
+    /// until the process was hunted down and killed.
+    let lifetime: TimeInterval = 120
+
+    let monitor = HotkeyMonitor(report: report)
+    guard monitor.start() else {
+        report.add("Could not install the event tap.")
+        report.close()
+        exit(1)
+    }
+
+    report.add("Hold Option and press Tab to cycle. Release Option to switch.")
+    report.add("Shift reverses direction, Escape cancels.")
+    report.add("Exits automatically after \(Int(lifetime))s.")
+    report.add()
+
+    pump(lifetime)
+
+    report.add()
+    report.add("Lifetime elapsed — exiting.")
+    report.close()
+    exit(0)
+}
+
+// MARK: - List
 
 let windows = WindowEnumerator.allWindows()
 
@@ -81,9 +101,8 @@ guard let target = windows[safe: index] else {
     exit(1)
 }
 
-let previous = NSWorkspace.shared.frontmostApplication
 report.add()
-report.add("Frontmost before: \(previous?.localizedName ?? "unknown")")
+report.add("Frontmost before: \(NSWorkspace.shared.frontmostApplication?.localizedName ?? "unknown")")
 report.add("Raising \(describe(target).trimmingCharacters(in: .whitespaces))")
 
 let outcome = WindowRaiser.raise(target)
@@ -93,12 +112,9 @@ pump(1.2)
 
 // MARK: - Verify
 
-let frontmost = NSWorkspace.shared.frontmostApplication
 report.add()
-report.add("Frontmost after: \(frontmost?.localizedName ?? "unknown")")
-
-let appMatched = frontmost?.processIdentifier == target.pid
-report.add("App focus moved: \(appMatched ? "YES" : "NO")")
+report.add("Frontmost after: \(NSWorkspace.shared.frontmostApplication?.localizedName ?? "unknown")")
+report.add("App focus moved: \(NSWorkspace.shared.frontmostApplication?.processIdentifier == target.pid ? "YES" : "NO")")
 
 // Re-read the tree: which of the target app's windows does it now consider main?
 let siblings = WindowEnumerator.allWindows().filter { $0.pid == target.pid }
@@ -108,8 +124,8 @@ for sibling in siblings {
     report.add(describe(sibling))
 }
 
-let mainTitle = siblings.first(where: \.isMain)?.title
 report.add()
+let mainTitle = siblings.first(where: \.isMain)?.title
 if mainTitle == target.title {
     report.add("RESULT: the requested window is now main.")
 } else {
