@@ -43,41 +43,9 @@ guard AX.waitForTrust(timeout: 300) else {
     exit(1)
 }
 
-// MARK: - Demo mode
-
-// Holds the panel open with no gesture, so it can be photographed.
-//
-// The panel normally exists only while the modifier is held, which makes it genuinely
-// hard to capture: a screenshot shortcut needs its own modifiers, and the panel vanishes
-// the moment Option comes up.
-if arguments.contains("--demo") {
-    let seconds = arguments.firstIndex(of: "--demo")
-        .flatMap { arguments[safe: $0 + 1] }
-        .flatMap(Double.init) ?? 20
-
-    let windows = WindowEnumerator.allWindows()
-    let layout = Preferences.layout
-    let thumbnails = ThumbnailProvider(report: report)
-    let panel = SwitcherPanel()
-
-    report.add("demo: \(layout.rawValue), \(windows.count) windows, \(Int(seconds))s")
-    panel.show(windows, selection: 1, layout: layout, thumbnails: layout.needsCapture ? thumbnails : nil)
-
-    if layout.needsCapture {
-        thumbnails.fetch(for: windows) { key, image in
-            panel.setThumbnail(image, for: key)
-        }
-    }
-
-    pump(seconds)
-    panel.hide()
-    report.close()
-    exit(0)
-}
-
 // MARK: - Hotkey mode
 
-if arguments.contains("--hotkey") {
+if arguments.contains("--hotkey") || arguments.contains("--demo") {
     // Runs until killed. The bounded lifetime this had was a safety net while the event tap
     // was unproven, since a tap swallowing the wrong keys would leave the machine without a
     // keyboard. It only ever consumes Tab while Option is held, and that has held across
@@ -107,6 +75,18 @@ if arguments.contains("--hotkey") {
     report.add("Shift reverses direction, Escape cancels.")
     report.add("Quit from the menu bar icon, or: pkill -f Sill")
     report.add()
+
+    // --demo holds the panel open with no gesture, so it can be photographed: the panel
+    // normally exists only while the modifier is held, and every screenshot shortcut needs
+    // modifiers of its own.
+    //
+    // It runs *inside* the switcher rather than as a separate mode. As its own mode it
+    // exited when the timer ran out, which quietly killed the running switcher along with
+    // it — a screenshot session left the user with no switcher and no clue why.
+    if let flag = arguments.firstIndex(of: "--demo") {
+        let seconds = arguments[safe: flag + 1].flatMap(Double.init) ?? 20
+        monitor.showDemoPanel(seconds: seconds)
+    }
 
     // ARC ends an object's life after its last use, not at the end of its lexical scope.
     // These three are never referenced again — the tap and the observers call into them

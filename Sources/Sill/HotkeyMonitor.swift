@@ -98,6 +98,33 @@ final class HotkeyMonitor {
         return true
     }
 
+    /// Shows the panel for a fixed time with no gesture, then hides it again.
+    ///
+    /// Exists so the panel can be photographed: it normally lives only while the modifier
+    /// is held, and every screenshot shortcut needs modifiers of its own.
+    func showDemoPanel(seconds: TimeInterval) {
+        let windows = history.sorted(WindowEnumerator.allWindows())
+        let layout = Preferences.layout
+        report.add("demo: \(layout.rawValue), \(windows.count) windows, \(Int(seconds))s")
+
+        panel.show(
+            windows,
+            selection: min(1, max(0, windows.count - 1)),
+            layout: layout,
+            thumbnails: layout.needsCapture ? thumbnails : nil
+        )
+        if layout.needsCapture {
+            thumbnails.fetch(for: windows) { [weak self] key, image in
+                self?.panel.setThumbnail(image, for: key)
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in
+            self?.panel.hide()
+            self?.report.add("demo: done")
+        }
+    }
+
     // MARK: - Event handling
 
     private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {

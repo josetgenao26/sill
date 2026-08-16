@@ -74,6 +74,18 @@ open build/Sill.app --args --hotkey
 Activity is logged to `~/Library/Logs/Sill.log`, which is the fastest way to see what the
 switcher thinks is happening.
 
+### Capturing the panel
+
+The panel only exists while the modifier is held, and every screenshot shortcut needs
+modifiers of its own — so it cannot be photographed the normal way. `--demo` holds it open
+for a set number of seconds, then hides it and carries on as the switcher:
+
+```bash
+open build/Sill.app --args --demo 20
+```
+
+Then `Cmd+Shift+4`, `Space`, and click the panel.
+
 ### A signing certificate, before your first build
 
 Without one, macOS revokes the Accessibility permission on **every rebuild**, and you will
